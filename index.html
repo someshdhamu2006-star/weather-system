@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skyline &mdash; Weather Forecasting System</title>
+  <meta name="description" content="Search a location, view current conditions, a multi-day forecast, and refresh live weather data." />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-sky="day-clear">
+
+  <!-- Ambient sky backdrop (signature element) -->
+  <div class="sky" aria-hidden="true">
+    <div class="sky__gradient"></div>
+    <div class="sky__sun-moon"></div>
+    <div class="sky__clouds"></div>
+  </div>
+
+  <div class="app">
+
+    <!-- ============ HEADER ============ -->
+    <header class="header">
+      <div class="header__brand">
+        <span class="header__mark">&#9728;</span>
+        <div>
+          <h1 class="header__title">Skyline</h1>
+          <p class="header__subtitle">Weather Forecasting System</p>
+        </div>
+      </div>
+
+      <!-- ================================================
+           MODULE / USE CASE 1: Search Location
+           Actors: User, Reporter, Administrator
+           ================================================ -->
+      <section class="search" id="search-module" aria-label="Search location">
+        <form id="search-form" class="search__form" autocomplete="off">
+          <input
+            id="search-input"
+            class="search__input"
+            type="text"
+            placeholder="Search a city, or a specific area&hellip;"
+            aria-label="Search for a location"
+            required
+          />
+          <button
+            type="button"
+            id="locate-btn"
+            class="btn btn--ghost btn--icon"
+            title="Use my location"
+            aria-label="Use my current location"
+          >&#128205;</button>
+          <button type="submit" class="btn btn--primary" id="search-btn">
+            Search
+          </button>
+        </form>
+        <ul id="search-suggestions" class="search__suggestions" hidden></ul>
+        <div id="recent-list" class="chip-row" hidden aria-label="Recent searches"></div>
+      </section>
+    </header>
+
+    <main class="main">
+
+      <!-- Status / error / empty states -->
+      <div id="status-banner" class="status-banner" hidden></div>
+
+      <!-- UC1 enhancement: pick a specific area within a searched city -->
+      <section class="area-panel" id="area-panel" aria-label="Areas in this city" hidden>
+        <div class="area-panel__head">
+          <span>Specific areas in <strong id="area-city-name">&mdash;</strong></span>
+          <button type="button" id="area-skip-btn" class="area-panel__skip">Use city center instead</button>
+        </div>
+        <div id="area-list" class="chip-row"></div>
+      </section>
+
+      <!-- ================================================
+           MODULE / USE CASE 2: View Current Weather
+           Actors: User, Weather Data Provider, Reporter
+           ================================================ -->
+      <section class="current" id="current-module" aria-label="Current weather" hidden>
+        <div class="current__location-row">
+          <div>
+            <h2 id="current-location" class="current__location">&mdash;</h2>
+            <p id="current-updated" class="current__updated">Last updated &mdash;</p>
+          </div>
+
+          <!-- ================================================
+               MODULE / USE CASE 4: Refresh Weather Data
+               Actors: User, Administrator, Weather Data Provider
+               ================================================ -->
+          <div class="refresh" id="refresh-module">
+            <div class="unit-toggle" id="unit-toggle" role="group" aria-label="Temperature unit">
+              <button type="button" data-unit="celsius" class="is-active">&deg;C</button>
+              <button type="button" data-unit="fahrenheit">&deg;F</button>
+            </div>
+            <label class="refresh__auto">
+              <input type="checkbox" id="auto-refresh-toggle" />
+              Auto-refresh
+            </label>
+            <button id="refresh-btn" class="btn btn--ghost" type="button" aria-label="Refresh weather data">
+              <span class="refresh__icon" aria-hidden="true">&#8635;</span> Refresh
+            </button>
+          </div>
+        </div>
+
+        <div class="current__grid">
+          <!-- Signature gauge -->
+          <div class="gauge" id="temp-gauge">
+            <svg viewBox="0 0 220 220" class="gauge__svg" aria-hidden="true">
+              <circle cx="110" cy="110" r="92" class="gauge__track" />
+              <circle cx="110" cy="110" r="92" class="gauge__fill" id="gauge-fill" />
+            </svg>
+            <div class="gauge__readout">
+              <span id="current-temp" class="gauge__temp">&mdash;&deg;</span>
+              <span id="current-condition" class="gauge__condition">&mdash;</span>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <span class="metric__label">Feels like</span>
+              <span class="metric__value" id="metric-feelslike">&mdash;&deg;</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Humidity</span>
+              <span class="metric__value" id="metric-humidity">&mdash;%</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Wind speed</span>
+              <span class="metric__value" id="metric-wind">&mdash; km/h</span>
+            </div>
+            <div class="metric">
+              <span class="metric__label">Rainfall</span>
+              <span class="metric__value" id="metric-rain">&mdash; mm</span>
+            </div>
+            <div class="metric metric--aqi" id="aqi-card" hidden>
+              <span class="metric__label">Air quality</span>
+              <span class="metric__value"><span id="aqi-value">&mdash;</span> <small id="aqi-label"></small></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hourly">
+          <span class="hourly__eyebrow">Next hours</span>
+          <div class="hourly__strip" id="hourly-strip"><!-- hourly cells injected here --></div>
+        </div>
+      </section>
+
+      <!-- ================================================
+           MODULE / USE CASE 3: View Weather Forecast
+           Actors: User, Weather Data Analyzer, Weather Data Provider
+           ================================================ -->
+      <section class="forecast" id="forecast-module" aria-label="Weather forecast" hidden>
+        <div class="forecast__heading">
+          <h3>7-day outlook</h3>
+          <span class="forecast__eyebrow">Analyzed from latest model run</span>
+        </div>
+        <div class="forecast__strip" id="forecast-strip"><!-- forecast day cards injected here --></div>
+      </section>
+
+      <!-- Empty state shown before any search -->
+      <section class="empty-state" id="empty-state">
+        <div class="empty-state__mark" aria-hidden="true">&#9729;</div>
+        <h2>No location selected yet</h2>
+        <p>Search for a city above to see current conditions and the 7-day forecast.</p>
+      </section>
+
+    </main>
+
+    <footer class="footer">
+      <p>Data: Open-Meteo &middot; Built for VIT ISWE406P &middot; Agile Development &amp; DevOps Lab</p>
+    </footer>
+  </div>
+
+  <script src="js/services/weatherService.js"></script>
+  <script src="js/modules/searchLocation.js"></script>
+  <script src="js/modules/currentWeather.js"></script>
+  <script src="js/modules/weatherForecast.js"></script>
+  <script src="js/modules/refreshData.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
