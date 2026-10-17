@@ -34,19 +34,18 @@ pipeline {
         stage('Push to Docker Hub') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
+                    credentialsId: 'dockerhub-token',
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     powershell '''
-                        $ErrorActionPreference = "Stop"
-                        $securePassword = ConvertTo-SecureString $env:DOCKER_PASS -AsPlainText -Force
-                        $credential = New-Object System.Management.Automation.PSCredential($env:DOCKER_USER, $securePassword)
-                        $credential.GetNetworkCredential().Password | docker login --username $env:DOCKER_USER --password-stdin
-                        if ($LASTEXITCODE -ne 0) { exit 1 }
+                        $ErrorActionPreference = 'Stop'
+                        $env:DOCKER_PASS | docker login --username $env:DOCKER_USER --password-stdin
+                        if ($LASTEXITCODE -ne 0) {
+                            throw 'Docker Hub login failed'
+                        }
                     '''
                     bat 'docker push %IMAGE_NAME%'
-                    bat 'docker logout'
                 }
             }
         }
@@ -57,8 +56,20 @@ pipeline {
                     "%KUBECTL%" apply -f deployment.yaml
                     if errorlevel 1 exit /b 1
                     "%KUBECTL%" rollout status deployment/weather-forecasting-system --timeout=120s
+                    if errorlevel 1 exit /b 1
+                    "%KUBECTL%" get pods
+                    "%KUBECTL%" get services
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Weather Forecast System CI/CD pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check the Console Output for the failing stage.'
         }
     }
 }
