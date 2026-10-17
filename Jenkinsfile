@@ -12,14 +12,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                echo 'Weather Forecast System'
+                echo 'Checking out Weather Forecast System'
                 checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t %LOCAL_IMAGE% -t %IMAGE_NAME% .'
+                bat 'docker build -t %LOCAL_IMAGE% .'
             }
         }
 
@@ -34,34 +34,15 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Hub') {
-            steps {
-                withCredentials([
-                    usernamePassword(
-                        credentialsId: 'dockerhub-token',
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )
-                ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-                        $env:DOCKER_PASS | docker login --username $env:DOCKER_USER --password-stdin
-                        if ($LASTEXITCODE -ne 0) {
-                            throw 'Docker Hub login failed. Check Jenkins credentials.'
-                        }
-                    '''
-                    bat 'docker push %IMAGE_NAME%'
-                }
-            }
-        }
-
         stage('Deploy to Kubernetes') {
             steps {
                 bat '''
                     "%KUBECTL%" apply -f deployment.yaml
                     if errorlevel 1 exit /b 1
+
                     "%KUBECTL%" rollout status deployment/weather-forecasting-system --timeout=120s
                     if errorlevel 1 exit /b 1
+
                     "%KUBECTL%" get pods
                     "%KUBECTL%" get services
                 '''
@@ -71,10 +52,10 @@ pipeline {
 
     post {
         success {
-            echo 'Weather Forecast System CI/CD pipeline completed successfully.'
+            echo 'Weather Forecast System pipeline completed successfully.'
         }
         failure {
-            echo 'Pipeline failed. Check Console Output for the failing stage.'
+            echo 'Pipeline failed. Check Console Output.'
         }
     }
 }
