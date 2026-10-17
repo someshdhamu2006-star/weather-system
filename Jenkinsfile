@@ -1,24 +1,26 @@
+
 pipeline {
     agent any
 
     stages {
-        stage('Clone') {
+        stage('Checkout') {
             steps {
-                echo 'Weather Forecasting System'
+                echo 'Weather Forecast System'
+                checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                bat 'docker build -t weather .'
+                bat 'docker build -t weather-forecast-system:1.0 .'
             }
         }
 
-        stage('Run Container') {
+        stage('Deploy Container') {
             steps {
-                bat 'docker stop weather || exit 0'
-                bat 'docker rm weather || exit 0'
-                bat 'docker run -d -p 8081:80 --name weather weather'
+                bat 'docker stop weather-jenkins || exit /b 0'
+                bat 'docker rm weather-jenkins || exit /b 0'
+                bat 'docker run -d --name weather-jenkins -p 8082:80 weather-forecast-system:1.0'
             }
         }
     }
