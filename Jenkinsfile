@@ -43,16 +43,10 @@ pipeline {
                         passwordVariable: 'DOCKER_PASS'
                     )
                 ]) {
-                    powershell '''
-                        $ErrorActionPreference = 'Stop'
-
-                        $env:DOCKER_PASS | docker login `
-                            --username $env:DOCKER_USER `
-                            --password-stdin
-
-                        if ($LASTEXITCODE -ne 0) {
-                            throw 'Docker Hub login failed. Check the dockerhub-creds credential.'
-                        }
+                    bat '''
+                        docker logout
+                        echo %DOCKER_PASS%| docker login --username %DOCKER_USER% --password-stdin
+                        if errorlevel 1 exit /b 1
                     '''
 
                     bat 'docker push %IMAGE_NAME%'
@@ -80,7 +74,6 @@ pipeline {
         success {
             echo 'Weather Forecast System CI/CD pipeline completed successfully.'
         }
-
         failure {
             echo 'Pipeline failed. Check Console Output for the failing stage.'
         }
