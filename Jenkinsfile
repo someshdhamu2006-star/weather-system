@@ -25,24 +25,29 @@ pipeline {
 
         stage('Run Docker Container') {
             steps {
-                bat 'docker stop weather-jenkins || exit /b 0'
-                bat 'docker rm weather-jenkins || exit /b 0'
-                bat 'docker run -d --name weather-jenkins -p 8082:80 %LOCAL_IMAGE%'
+                bat '''
+                    docker stop weather-jenkins 2>NUL
+                    docker rm weather-jenkins 2>NUL
+                    docker run -d --name weather-jenkins -p 8082:80 %LOCAL_IMAGE%
+                    if errorlevel 1 exit /b 1
+                '''
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-token',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'dockerhub-token',
+                        usernameVariable: 'DOCKER_USER',
+                        passwordVariable: 'DOCKER_PASS'
+                    )
+                ]) {
                     powershell '''
                         $ErrorActionPreference = 'Stop'
                         $env:DOCKER_PASS | docker login --username $env:DOCKER_USER --password-stdin
                         if ($LASTEXITCODE -ne 0) {
-                            throw 'Docker Hub login failed'
+                            throw 'Docker Hub login failed. Check Jenkins credentials.'
                         }
                     '''
                     bat 'docker push %IMAGE_NAME%'
@@ -69,7 +74,7 @@ pipeline {
             echo 'Weather Forecast System CI/CD pipeline completed successfully.'
         }
         failure {
-            echo 'Pipeline failed. Check the Console Output for the failing stage.'
+            echo 'Pipeline failed. Check Console Output for the failing stage.'
         }
     }
 }
